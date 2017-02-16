@@ -35,31 +35,30 @@ class PostsController extends Controller
     public function store(PostRequest $request){
 
 
-            $path = public_path().'/images/'; // your upload folder
-            if (!File::exists($path))
-            {
-                File::makeDirectory($path, 0777, true, true);
-            }
+        $path = public_path().'/images/'; // your upload folder
+        if (!File::exists($path))
+        {
+            File::makeDirectory($path, 0777, true, true);
+        }
 
-            $image       = $request->file('image');
-            $img = Image::make($request->file('image'));
-            $description = $request->input('description');
-            $filename    = str_random(40) . '.' .$image->getClientOriginalExtension();
+        $image       = $request->file('image');
+        $img = Image::make($request->file('image'));
+        $description = $request->input('description');
+        $filename    = str_random(40) . '.' .$image->getClientOriginalExtension();
 
-            $img->resize(null, 150, function ($constraint) //resize and save thumbnail
-            {$constraint->aspectRatio();})
-            ->save($path.'thumbnail-'.$filename);
+        $img->resize(null, 150, function ($constraint) //resize and save thumbnail
+        {$constraint->aspectRatio();})->save($path.'thumbnail-'.$filename);
 
-            $image->move($path, $filename); // move file to path
+        $image->move($path, $filename); // move file to path
 
-            // create a record
-            Post::create([
+        // create a record
+        Post::create([
 
-                'description' => $description,
-                'image' => $filename,
-                'thumbnail' => 'thumbnail-' . $filename
+            'description' => $description,
+            'image' => $filename,
+            'thumbnail' => 'thumbnail-' . $filename
 
-            ]);
+        ]);
 
             return redirect('posts');
 
@@ -81,34 +80,50 @@ class PostsController extends Controller
 
     }
 
-    public function update($id, Requests\PostRequest $request) {
+    public function update($id, Request $request)
+    {
+        $this->validate($request, [
+            'description' => 'required|min:5',
+            'image' => 'image',
+        ]);
 
         $post = Post::findOrFail($id);
         $path = public_path().'/images/'; // your upload folder path
-        File::delete($path . $post->image); // delete old image from images path
-        File::delete(public_path() . '/images/' . 'thumbnail-' . $post->image); // delete old thumbnail from images path
-        $image       = $request->file('image');
-        $img = Image::make($request->file('image')); //thumbnail
+        $image = $request->file('image');
         $description = $request->input('description');
-        $filename    = str_random(40) . '.' .$image->getClientOriginalExtension();
 
-        $img->resize(null, 150, function ($constraint) // resize and save thumbnail
-        {$constraint->aspectRatio();})
-            ->save($path.'thumbnail-'.$filename);
-
-        $image->move($path, $filename); // move file to images path
-
+        if (!$image) { //if we need to edit only description
         //update a record
-        $post->update([
+            $post->update([
+                'description' => $description,
+            ]);
 
-            'description' => $description,
-            'image' => $filename,
-            'thumbnail' => 'thumbnail-' . $filename
+            return redirect('posts');
 
-        ]);
+        } else { //if we need to edit description and change image
 
-        return redirect('posts');
+            File::delete($path . $post->image); // delete old image from images path
+            File::delete(public_path() . '/images/' . 'thumbnail-' . $post->image); // delete old thumbnail from images path
+            $img = Image::make($request->file('image')); //thumbnail
+            $filename = str_random(40) . '.' . $image->getClientOriginalExtension();
+        // resize and save thumbnail
+            $img->resize(null, 150, function ($constraint){
+                $constraint->aspectRatio();
+            })
+                ->save($path . 'thumbnail-' . $filename);
+            $image->move($path, $filename); // move file to images path
+        //update a record
+            $post->update([
 
+                'description' => $description,
+                'image' => $filename,
+                'thumbnail' => 'thumbnail-' . $filename,
+
+            ]);
+
+            return redirect('posts');
+
+        }
     }
 
     public function destroy($id)
