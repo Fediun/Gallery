@@ -35,12 +35,12 @@ class PostsController extends Controller
     public function store(PostRequest $request){
 
 
-            $path = public_path('images/'); // your upload folder
+            $path = public_path().'/images/'; // your upload folder
             if (!File::exists($path))
             {
                 File::makeDirectory($path, 0777, true, true);
             }
-        
+
             $image       = $request->file('image');
             $img = Image::make($request->file('image'));
             $description = $request->input('description');
